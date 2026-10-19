@@ -1,0 +1,8 @@
+{
+  "Enabled": true,
+  "RequiredLevels": [15, 25, 35, 45],
+  "KeepOnlyLevelCondition": true,
+  "DisableItemTransfer": true,
+  "GrantAchievements": true,
+  "RewardMailStorageSeconds": 31536000
+}

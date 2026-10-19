@@ -1,0 +1,76 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>PrestigeRework</AssemblyName>
+    <RootNamespace>PrestigeRework</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Library</OutputType>
+    <Version>1.0.0</Version>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!--
+    SPT 4.1.x is not published on NuGet past 4.1.2, so the mod is compiled against the assemblies of a real
+    server installation. Point SptServerDir at the SPT_Runtime folder of your server:
+        dotnet build -c Release -p:SptServerDir="D:\SPT\SPT_Runtime"
+  -->
+  <PropertyGroup>
+    <SptServerDir Condition="'$(SptServerDir)' == ''"></SptServerDir>
+  </PropertyGroup>
+
+  <Target Name="CheckSptServerDir" BeforeTargets="PrepareForBuild" Condition="'$(SptServerDir)' == ''">
+    <Error Text="SptServerDir is not set. Pass it on the command line, e.g. dotnet build -c Release -p:SptServerDir=&quot;D:\SPT\SPT_Runtime&quot;" />
+  </Target>
+
+  <ItemGroup>
+    <Reference Include="SPTarkov.Server.Core">
+      <HintPath>$(SptServerDir)\SPTarkov.Server.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.Common">
+      <HintPath>$(SptServerDir)\SPTarkov.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.DI">
+      <HintPath>$(SptServerDir)\SPTarkov.DI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SPTarkov.Reflection">
+      <HintPath>$(SptServerDir)\SPTarkov.Reflection.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(SptServerDir)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SemanticVersioning">
+      <HintPath>$(SptServerDir)\SemanticVersioning.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Config\config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Optional: install straight into a local server while developing:
+         dotnet build -c Debug -p:SptServerDir="..." -p:DeployToServer=true -->
+  <Target Name="DeployToLocalServer" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' and '$(DeployToServer)' == 'true'">
+    <ItemGroup>
+      <BuiltAssembly Include="$(TargetPath)" />
+      <BuiltSymbols Include="$(TargetDir)$(TargetName).pdb" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
+      <BuiltConfig Include="$(TargetDir)Config\config.json" Condition="Exists('$(TargetDir)Config\config.json')" />
+    </ItemGroup>
+    <MakeDir Directories="$(SptServerDir)\user\mods\$(AssemblyName)\Config" />
+    <Copy SourceFiles="@(BuiltAssembly)" DestinationFolder="$(SptServerDir)\user\mods\$(AssemblyName)" />
+    <Copy SourceFiles="@(BuiltSymbols)" DestinationFolder="$(SptServerDir)\user\mods\$(AssemblyName)" Condition="'@(BuiltSymbols)' != ''" />
+    <Copy SourceFiles="@(BuiltConfig)" DestinationFolder="$(SptServerDir)\user\mods\$(AssemblyName)\Config" Condition="'@(BuiltConfig)' != ''" />
+    <Message Importance="high" Text="Deployed $(AssemblyName) to $(SptServerDir)\user\mods\$(AssemblyName)" />
+  </Target>
+
+</Project>
