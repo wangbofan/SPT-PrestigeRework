@@ -43,18 +43,22 @@ public class PrestigeReworkMod : IOnLoad
             return Task.CompletedTask;
         }
 
-        ApplyRequiredLevels(config);
-
+        // Enable the patch FIRST: on an SPT version whose PrestigeController.ObtainPrestige looks different
+        // the patch cannot be applied, and rewriting the requirements without it would show a "free claim"
+        // UI while the vanilla flow still queues a character wipe. In that case the mod disables itself.
         try
         {
             _patch = new PrestigeObtainPatch();
             _patch.Enable();
-            _logger.Success($"[PrestigeRework] Loaded: prestige level requirements set to {string.Join(" / ", GetLevels(config))}, character wipe disabled.");
         }
         catch (Exception ex)
         {
-            _logger.Error($"[PrestigeRework] Failed to enable the obtain patch, the vanilla wipe flow stays active: {ex}");
+            _logger.Error($"[PrestigeRework] This SPT version is not supported (PrestigeController.ObtainPrestige could not be patched), the mod stays disabled and nothing was changed: {ex}");
+            return Task.CompletedTask;
         }
+
+        ApplyRequiredLevels(config);
+        _logger.Success($"[PrestigeRework] Loaded: prestige level requirements set to {string.Join(" / ", GetLevels(config))}, character wipe disabled.");
 
         return Task.CompletedTask;
     }
