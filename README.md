@@ -101,11 +101,13 @@ SPT_Runtime\user\mods\PrestigeRework\
 
 ## 兼容性
 
-- 服务端：SPT **4.1.5 / 4.1.6**（`~4.1.5`，即 >= 4.1.5 < 4.2.0），.NET 10。
-  4.1.6 已实测；4.1.5 用的是同一套转生接口，但作者手头没有 4.1.5 服务端，**未实测**。
+- 服务端：SPT **4.1.2 及以上**（`~4.1.2`，即 >= 4.1.2 < 4.2.0），.NET 10。
+  编译时引用的是 SPT 官方 NuGet 上的 4.1.2 公开引用程序集，因此 DLL 里记录的
+  `SPTarkov.Server.Core` 版本是 **4.1.0.0**——比 4.1.6.0 更容易绑定，4.1.2 ~ 4.1.6 全都能加载。
+  4.1.6 已实测；4.1.5 / 4.1.2 用的是同一套转生接口，但作者手头只有 4.1.6 服务端，其余版本**未实测**。
   如果哪个版本里 `PrestigeController.ObtainPrestige` 长得不一样，补丁会打不上，此时模组**会自我禁用**并打一条错误日志，
   转生条件保持原样（不会出现「界面显示能领、实际却重置角色」的情况）。
-- 客户端：SPT 4.1.5 / 4.1.6 客户端 + BepInEx 5。插件只依赖 EFT 的 UI 类型（`EFT.UI.ObtainPrestigeScreen`），与 SPT 版本无关。
+- 客户端：SPT 4.1.x 客户端 + BepInEx 5。插件只依赖 EFT 的 UI 类型（`EFT.UI.ObtainPrestigeScreen`），与 SPT 版本无关。
 - 只改服务端模板和请求处理，不修改客户端资源；不依赖任何其他模组。
 
 ## 已知限制
@@ -117,17 +119,22 @@ SPT_Runtime\user\mods\PrestigeRework\
 
 ## 从源码构建
 
-需要 .NET SDK 10 和一个 SPT 4.1.6 服务端安装（编译时引用其程序集）。
+需要 .NET SDK 10。默认从 NuGet 拉 SPT 官方 4.1.2 引用程序集，**不需要本地装 SPT**；
+想改成引用本地服务端（例如自己装了 4.1.6）就加 `-p:SptServerDir="D:\SPT\SPT_Runtime"`，
+但注意这样做会把 DLL 里的 AssemblyRef 抬到本地版本，生成的包只能在该版本或更新的服务端加载。
 
 ```powershell
-# 服务端模组
-dotnet build src/PrestigeRework/PrestigeRework.csproj -c Release -p:SptServerDir="D:\SPT\SPT_Runtime"
+# 服务端模组（推荐：不传 SptServerDir，用 NuGet 上的 4.1.2 引用程序集）
+dotnet build src/PrestigeRework/PrestigeRework.csproj -c Release
+
+# 或者引用本地服务端（会抬高 AssemblyRef，别用来发版）
+# dotnet build src/PrestigeRework/PrestigeRework.csproj -c Release -p:SptServerDir="D:\SPT\SPT_Runtime"
 
 # 客户端插件
 dotnet build src/PrestigeSkipTransfer/PrestigeSkipTransfer.csproj -c Release -p:GameDir="D:\SPT"
 
 # 打包（生成 artifacts/ 下的整合包 zip）
-./scripts/build.ps1 -SptServerDir "D:\SPT\SPT_Runtime" -GameDir "D:\SPT"
+./scripts/build.ps1 -GameDir "D:\SPT"
 ```
 
 ## English

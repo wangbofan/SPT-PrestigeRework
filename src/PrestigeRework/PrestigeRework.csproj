@@ -7,25 +7,37 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <OutputType>Library</OutputType>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <!--
-    SPT 4.1.x is not published on NuGet past 4.1.2, so the mod is compiled against the assemblies of a real
-    server installation. Point SptServerDir at the SPT_Runtime folder of your server:
-        dotnet build -c Release -p:SptServerDir="D:\SPT\SPT_Runtime"
+    IMPORTANT - why this compiles against an OLD SPT version instead of the one you are running:
+    the assembly reference written into the mod dll is the AssemblyVersion of the SPT assemblies it is
+    compiled against. A mod that references SPTarkov.Server.Core 4.1.6.0 CANNOT be loaded on SPT 4.1.5
+    (the runtime refuses to bind to an older assembly and drops the whole mod). Compiling against the
+    oldest supported API surface keeps the reference version low, so the mod binds on every newer
+    version too. Do not "update" SptApiPackageVersion unless you intend to drop older SPT versions.
+
+    Default = reproducible build from the public NuGet reference assemblies (no local server needed).
+    Set -p:SptServerDir=<path to SPT_Runtime> to compile against a real installation instead; only do
+    that with a server that is NOT newer than the oldest SPT version you want to support.
   -->
   <PropertyGroup>
+    <SptApiPackageVersion Condition="'$(SptApiPackageVersion)' == ''">4.1.2</SptApiPackageVersion>
     <SptServerDir Condition="'$(SptServerDir)' == ''"></SptServerDir>
   </PropertyGroup>
 
-  <Target Name="CheckSptServerDir" BeforeTargets="PrepareForBuild" Condition="'$(SptServerDir)' == ''">
-    <Error Text="SptServerDir is not set. Pass it on the command line, e.g. dotnet build -c Release -p:SptServerDir=&quot;D:\SPT\SPT_Runtime&quot;" />
-  </Target>
+  <ItemGroup Condition="'$(SptServerDir)' == ''">
+    <PackageReference Include="SPTarkov.Server.Core" Version="$(SptApiPackageVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="SPTarkov.Reflection" Version="$(SptApiPackageVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="HarmonyX" Version="2.16.1" ExcludeAssets="runtime" />
+    <PackageReference Include="SemanticVersioning" Version="3.0.0" ExcludeAssets="runtime" />
+  </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(SptServerDir)' != ''">
     <Reference Include="SPTarkov.Server.Core">
       <HintPath>$(SptServerDir)\SPTarkov.Server.Core.dll</HintPath>
       <Private>false</Private>
@@ -60,7 +72,7 @@
 
   <!-- Optional: install straight into a local server while developing:
          dotnet build -c Debug -p:SptServerDir="..." -p:DeployToServer=true -->
-  <Target Name="DeployToLocalServer" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' and '$(DeployToServer)' == 'true'">
+  <Target Name="DeployToLocalServer" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' and '$(DeployToServer)' == 'true' and '$(SptServerDir)' != ''">
     <ItemGroup>
       <BuiltAssembly Include="$(TargetPath)" />
       <BuiltSymbols Include="$(TargetDir)$(TargetName).pdb" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />

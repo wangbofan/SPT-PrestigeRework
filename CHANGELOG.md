@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.0.2
+
+**修的是 1.0.0 / 1.0.1 在 4.1.5 上装不上的问题。** 1.0.1 只是把 `SptVersion` 从 `~4.1.6` 放宽到 `~4.1.5`，方向是错的：
+真正拦住 4.1.5 用户的不是元数据里的版本范围，而是 CLR 的程序集绑定失败——
+
+```
+Could not load file or assembly 'SPTarkov.Server.Core, Version=4.1.6.0, ...'
+```
+
+因为 1.0.1 的 DLL 是拿本地 4.1.6 服务端编的，AssemblyRef 里钉死 4.1.6.0，而 4.1.5 服务端只有 4.1.5.0 的程序集，
+请求的版本比装的高就必然失败。更麻烦的是 SPT 的模组校验是「一个失败就全都不加载」，
+所以这一个 DLL 会连带把同服所有服务端模组一起弄挂。
+
+修法：
+
+- 服务端模组改为引用 **NuGet 上的 SPT 官方 4.1.2 公开引用程序集**（`SPTarkov.Server.Core` / `SPTarkov.Reflection` 4.1.2 包，
+  其 AssemblyVersion 是 4.1.0.0），DLL 里的 AssemblyRef 现在是 **4.1.0.0**。
+  请求版本低于等于安装版本就能正常绑定，于是 4.1.2 / 4.1.5 / 4.1.6 全都能加载。
+- `SptVersion` 相应改为 `~4.1.2`（>= 4.1.2 < 4.2.0）。
+- 全量源码对着 4.1.2 的公开 API 重新编译通过，确认用到的每个 SPT 成员（`PrestigeController.ObtainPrestige`、
+  `PrestigeHelper.PrestigeAchievements`、`ProfileHelper.AddHideoutCustomisationUnlock`、`RewardHelper.AddAchievementToProfile`、
+  `MailSendService.SendSystemMessageToPlayer`、`TemplateTable.Prestige`、`SptData.PendingPrestige` 等）在 4.1.2 就存在，
+  功能与奖励内容不变。
+- `scripts/build.ps1` 的 `-SptServerDir` 改为可选：不传就用 NuGet 引用程序集，编出来的是通用包；
+  传了就用本地服务端（只适合自己调试，产物只能在该版本及以上加载）。
+- 4.1.6 已实测；4.1.5 手上没有服务端，仍未实测（但绑定层面的拦路石已经拆掉）。
+
 ## 1.0.1
 
 - 支持的 SPT 版本范围从 `~4.1.6` 放宽到 `~4.1.5`（>= 4.1.5 < 4.2.0）。
